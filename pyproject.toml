@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "epitope-rank"
+version = "0.1.0"
+description = "Tile a protein antigen into peptides, score them against an HLA panel, and return a ranked shortlist of candidate epitopes."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "FoSheng Hsu" }]
+keywords = ["immunology", "epitope", "HLA", "MHC", "peptide", "bioinformatics"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+# The real predictor. Kept optional because it pulls in TensorFlow and needs a
+# one-time model download (`mhcflurry-downloads fetch`), which CI should not do.
+mhcflurry = ["mhcflurry>=2.1"]
+plot = ["matplotlib>=3.7"]
+dev = ["pytest>=7.4", "ruff>=0.5"]
+
+[project.scripts]
+epitope-rank = "epitope_rank.cli:main"
+
+[project.urls]
+Source = "https://github.com/foshenghsu/epitope-rank"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

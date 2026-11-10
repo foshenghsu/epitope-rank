@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Run output (the examples/results directory is committed on purpose; anything
+# written elsewhere by a local run is not)
+/results/
+/tmp/
+
+# macOS
+.DS_Store
