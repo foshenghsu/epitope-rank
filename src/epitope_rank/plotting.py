@@ -50,27 +50,36 @@ def plot_landscape(
             s=52, facecolors="none", edgecolors="#c2410c", linewidths=1.6,
             label=f"shortlist (n={len(shortlist)})", zorder=3,
         )
-        # Label only the top few, alternating above and below the marker so that
-        # neighbouring peptides - which is what a shortlist is full of - do not
-        # print on top of each other.
-        for i, row in enumerate(shortlist.head(5).itertuples()):
-            above = i % 2 == 0
+        # Label only the top few. A shortlist is mostly overlapping frames of the
+        # same region, so neighbouring labels collide: alternating above/below is
+        # not enough when two peptides share a start position. Step the offsets
+        # through several distances and nudge alternate labels sideways, with a
+        # leader line so a displaced label still reads as belonging to its marker.
+        offsets = [(0, 14), (0, -18), (34, 24), (-34, -28), (0, 34)]
+        # strict=False: a shortlist shorter than `offsets` is normal (small panels).
+        for (dx, dy), row in zip(
+            offsets, shortlist.head(len(offsets)).itertuples(), strict=False
+        ):
             ax.annotate(
                 row.peptide,
                 (row.start, row.best_percentile),
                 textcoords="offset points",
-                xytext=(0, 11 if above else -16),
+                xytext=(dx, dy),
                 ha="center",
-                va="bottom" if above else "top",
+                va="bottom" if dy > 0 else "top",
                 fontsize=7,
                 color="#7c2d12",
                 zorder=4,
+                arrowprops=dict(
+                    arrowstyle="-", color="#c2410c", linewidth=0.6,
+                    shrinkA=0, shrinkB=6, alpha=0.7,
+                ),
             )
 
     ax.set_yscale("log")
     ax.invert_yaxis()  # strong binders (low percentile) at the top
     ax.set_xlabel("peptide start position in antigen (1-based)")
-    ax.set_ylabel("best-allele percentile rank (log, lower = stronger)")
+    ax.set_ylabel("best-allele affinity percentile (log, lower = stronger)")
     ax.set_title(title or "Predicted binding landscape")
     if protein_length:
         ax.set_xlim(0, protein_length + 1)

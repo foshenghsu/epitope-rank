@@ -64,3 +64,18 @@ def parse_fasta(text: str) -> list[Record]:
 def read_fasta(path: str | Path) -> list[Record]:
     """Read and validate a FASTA file."""
     return parse_fasta(Path(path).read_text(encoding="utf-8"))
+
+
+def display_name(header: str) -> str:
+    """Readable antigen name from a FASTA header.
+
+    UniProt headers look like `sp|P78358|CTG1B_HUMAN Cancer/testis antigen 1 ...`.
+    The raw first field ends up in every output row and in the figure title, where
+    `sp|P78358|CTG1B_HUMAN` is noise; this returns the entry name (`CTG1B_HUMAN`).
+    Any other header falls back to its first whitespace-delimited field.
+    """
+    first = header.split()[0] if header.split() else header
+    parts = first.split("|")
+    if len(parts) == 3 and parts[0] in {"sp", "tr"}:
+        return parts[2]
+    return first

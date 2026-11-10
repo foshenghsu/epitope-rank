@@ -40,5 +40,7 @@ jobs:
           epitope-rank \
             --fasta data/NY-ESO-1_P78358.fasta \
             --alleles 'HLA-A*02:01,HLA-B*07:02' \
-            --predictor toy --top 5 --out /tmp/epitope-rank-ci
+            --predictor toy --top 5 --plot --out /tmp/epitope-rank-ci
           test -s /tmp/epitope-rank-ci/shortlist.tsv
+          test -s /tmp/epitope-rank-ci/all_scores.tsv
+          test -s /tmp/epitope-rank-ci/landscape.png

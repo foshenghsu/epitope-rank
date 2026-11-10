@@ -143,3 +143,21 @@ def test_empty_peptides_and_bad_config():
         RankingConfig(affinity_nm=-1)
     with pytest.raises(ValueError):
         RankingConfig(top_n=0)
+
+
+def test_best_allele_is_always_one_that_binds():
+    """The AND cutoff means the lowest-percentile allele can fail the nM cut.
+    Reporting it as `best_allele` would contradict `alleles_bound` on the same row."""
+    table = [
+        # Lowest percentile, but 10x over the 500 nM cutoff -> not a binder.
+        {"peptide": "ACDEFGHIK", "allele": ALLELES[0], "affinity_nm": 5000.0, "percentile": 0.1},
+        # Weaker percentile, but passes both cutoffs -> this is the real best.
+        {"peptide": "ACDEFGHIK", "allele": ALLELES[1], "affinity_nm": 120.0, "percentile": 1.1},
+    ]
+    shortlist, _ = rank_peptides(
+        tile("ACDEFGHIK", lengths=[9]), ALLELES, StubPredictor(table)
+    )
+    assert shortlist.loc[0, "best_allele"] == ALLELES[1]
+    assert shortlist.loc[0, "best_affinity_nm"] == 120.0
+    assert shortlist.loc[0, "alleles_bound"] == ALLELES[1]
+    assert shortlist.loc[0, "best_allele"] in shortlist.loc[0, "alleles_bound"]

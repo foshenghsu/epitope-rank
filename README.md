@@ -31,7 +31,7 @@ mhcflurry-downloads fetch models_class1_presentation
 
 Two things decide whether a peptide is worth making, and they are kept separate rather than mashed into one score:
 
-- **strength** — how tightly the best allele in the panel binds it, as a percentile rank against a background of random peptides. Percentile, not raw nM, because affinity is not comparable between alleles.
+- **strength** — how tightly the best allele in the panel binds it, as an *affinity* percentile rank against a background of random peptides. Percentile, not raw nM, because affinity is not comparable between alleles. (MHCflurry also reports a `presentation_percentile`, which folds in antigen processing; this tool asks for the affinity percentile specifically, because the 2.0 cutoff below is an affinity-percentile convention and applying it to a presentation score would be a different filter.)
 - **breadth** — how many alleles in the panel bind it at all. A peptide that binds four alleles covers more of the patient population per peptide synthesised, which is the thing that actually costs money.
 
 A peptide must clear both cutoffs (`--affinity-nm`, default 500 nM, and `--percentile`, default 2.0) to count as bound by an allele. `--sort` then decides which property leads:
@@ -55,32 +55,37 @@ Output lands in `--out`:
 
 NY-ESO-1 (UniProt [P78358](https://rest.uniprot.org/uniprotkb/P78358.fasta), 180 aa) is a good test antigen because part of the answer is already known: it has a well-described immunodominant HLA-A\*02:01 epitope at residues **157–165, SLLMWITQC**.
 
-The command at the top of this README (MHCflurry 2.1, four alleles, 343 peptides) shortlists six:
+The command at the top of this README, run with `--out examples/results` (MHCflurry 2.3.25, four alleles, 343 peptides, 41 of which bind at least one allele), shortlists ten — the numbers below are copied from the committed [`examples/results/shortlist.tsv`](examples/results/shortlist.tsv):
 
 | rank | peptide | start | best allele | nM | %ile | breadth |
 |---|---|---|---|---|---|---|
-| 1 | AADHRQLQL | 139 | HLA-B\*07:02 | 248.8 | 0.39 | 3/4 |
-| 2 | APRGPHGGAA | 60 | HLA-B\*07:02 | 16.0 | 0.14 | 2/4 |
-| 3 | GPHGGAASGL | 63 | HLA-B\*07:02 | 24.5 | 0.19 | 2/4 |
-| 4 | APPLPVPGV | 113 | HLA-B\*07:02 | 75.7 | 0.47 | 2/4 |
-| 5 | LAMPFATPM | 92 | HLA-B\*07:02 | 151.5 | 0.65 | 2/4 |
-| 6 | EAELARRSL | 101 | HLA-B\*07:02 | 219.9 | 0.88 | 2/4 |
+| 1 | AADHRQLQL | 139 | HLA-B\*08:01 | 383.2 | 0.614 | 3/4 |
+| 2 | APRGPHGGAA | 60 | HLA-B\*07:02 | 16.0 | 0.007 | 2/4 |
+| 3 | APRGPHGGA | 60 | HLA-B\*07:02 | 17.9 | 0.014 | 2/4 |
+| 4 | GPHGGAASGL | 63 | HLA-B\*07:02 | 24.5 | 0.046 | 2/4 |
+| 5 | APPLPVPGVL | 113 | HLA-B\*07:02 | 33.5 | 0.092 | 2/4 |
+| 6 | APPLPVPGV | 113 | HLA-B\*07:02 | 75.7 | 0.301 | 2/4 |
+| 7 | LAMPFATPM | 92 | HLA-B\*07:02 | 151.5 | 0.528 | 2/4 |
+| 8 | EAELARRSL | 101 | HLA-B\*08:01 | 353.9 | 0.584 | 2/4 |
+| 9 | GPGGGAPRGP | 55 | HLA-B\*07:02 | 306.3 | 0.777 | 2/4 |
+| 10 | LLMWITQCFL | 158 | HLA-A\*02:01 | 14.6 | 0.057 | 1/4 |
 
-**The known epitope is not in that list**, and the reason is the interesting part. `SLLMWITQC` is called a binder for HLA-A\*02:01 (375 nM, 1.64th percentile) and a non-binder for the other three alleles — so breadth-first ranking, which rewards covering more of the panel per peptide synthesised, puts six promiscuous B\*07:02 binders above it.
+**The canonical 9mer itself is not on that list**, and the reason is the interesting part. `SLLMWITQC` is a predicted binder for HLA-A\*02:01 (375.3 nM, 1.202 percentile) and a non-binder for the other three, so breadth-first ranking — which rewards covering more of the panel per peptide synthesised — puts nine peptides above it.
 
-Sort by strength instead and it appears, but barely:
+But the **region** is not missed. `LLMWITQCFL` (158–167) contains the epitope's core, overlaps it by eight residues, and lands at rank 10 as the single tightest binder in the table at 14.6 nM — carried there by strength despite binding only one allele. Sort by strength on an A\*02:01-only panel and the frames separate further:
 
 ```bash
 epitope-rank --fasta data/NY-ESO-1_P78358.fasta \
   --alleles 'HLA-A*02:01' --lengths 9 --top 0 --sort strength
 ```
 
-15 peptides clear the cutoffs; `SLLMWITQC` ranks **14th of 15**, while its overlapping neighbour `LMWITQCFL` (159–167) ranks 2nd at 21 nM.
+16 nonamers clear the cutoffs. `LMWITQCFL` (159–167) ranks **1st at 21.4 nM**; the canonical `SLLMWITQC` ranks **13th of 16**, at 375.3 nM.
 
-Two things are worth taking from that, and both are the point of writing this down rather than eyeballing a predictor's web form:
+Three things are worth taking from that, and they are the point of writing this down rather than eyeballing a predictor's web form:
 
 1. **Ranking choice changes the answer more than the predictor does.** Breadth and strength are different campaigns, so `--sort` is a flag rather than a buried default.
-2. **Predicted affinity is not immunodominance.** The canonical A\*02:01 epitope of this antigen is a mid-affinity binder that a strength sort nearly discards. A pipeline that quietly took the top 10 by affinity would have missed it, which is an argument for keeping `all_scores.tsv` and for treating the shortlist as a synthesis queue rather than an answer.
+2. **Predicted affinity is not immunodominance.** The canonical A\*02:01 epitope of this antigen is a mid-affinity binder that ranks 13th of 16 among nonamers its own allele binds. Whatever makes it immunodominant in patients, this predictor is not measuring it.
+3. **The frame matters as much as the region.** A pipeline reporting only peptide identities would call rank 10 a hit and the canonical epitope a miss, when they are eight residues of the same sequence. That is an argument for keeping `all_scores.tsv` and reading positions, not just names.
 
 Running with `--predictor toy` reproduces the mechanics without model downloads. Its numbers are a placeholder, not predictions, and every such run says so on stderr.
 
@@ -99,7 +104,7 @@ Worth stating plainly, since a tool like this is easy to over-trust:
 
 ```bash
 pip install -e '.[dev,plot]'
-pytest          # 23 tests
+pytest          # 24 tests
 ruff check .
 ```
 

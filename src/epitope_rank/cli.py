@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from epitope_rank import __version__
-from epitope_rank.fasta import read_fasta
+from epitope_rank.fasta import display_name, read_fasta
 from epitope_rank.predictors import get_predictor
 from epitope_rank.ranking import (
     DEFAULT_AFFINITY_NM,
@@ -59,6 +59,12 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     p.add_argument("--top", type=int, default=25, help="Rows in the shortlist; 0 for all")
+    p.add_argument(
+        "--name",
+        default=None,
+        help="Antigen name for output rows and the figure title "
+        "(default: derived from the FASTA header)",
+    )
     p.add_argument("--out", type=Path, default=Path("results"), help="Output directory")
     p.add_argument("--plot", action="store_true", help="Also write landscape.png")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -83,7 +89,8 @@ def main(argv: list[str] | None = None) -> int:
 
     alleles = _split(args.alleles)
     lengths = [int(n) for n in _split(args.lengths)]
-    peptides = tile(record.sequence, lengths=lengths, protein=record.name.split()[0])
+    antigen = args.name or display_name(record.name)
+    peptides = tile(record.sequence, lengths=lengths, protein=antigen)
     if not peptides:
         print(
             f"error: antigen is {len(record)} aa, shorter than every requested "
@@ -123,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
 
         png = plot_landscape(
             all_scores, shortlist, args.out / "landscape.png",
-            protein_length=len(record), title=f"{record.name.split()[0]} ({predictor.name})",
+            protein_length=len(record), title=f"{antigen} ({predictor.name})",
         )
         print(f"wrote {png}")
 

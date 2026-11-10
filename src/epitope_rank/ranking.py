@@ -110,7 +110,18 @@ def rank_peptides(
     all_scores = all_scores.assign(is_binder=binder)
 
     group_cols = ["peptide", "start", "end", "length", "protein"]
-    strongest = all_scores.sort_values("percentile").groupby(group_cols, as_index=False).first()
+    # The reported "best" allele must be one that actually binds. Because the
+    # cutoff is an AND of affinity and percentile, the lowest-percentile allele
+    # can fail the nM cut while a different allele passes both - reporting the
+    # former would contradict `alleles_bound` in the same row. Sorting binders
+    # first keeps the two columns consistent. drop_duplicates (rather than
+    # groupby().first(), which takes the first non-null value of each column
+    # independently) keeps allele, affinity and percentile from the same row.
+    strongest = (
+        all_scores.sort_values(["is_binder", "percentile"], ascending=[False, True])
+        .drop_duplicates(subset=group_cols, keep="first")
+        .reset_index(drop=True)
+    )
     strongest = strongest.rename(
         columns={
             "allele": "best_allele",

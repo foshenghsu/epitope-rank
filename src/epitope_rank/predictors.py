@@ -67,9 +67,14 @@ class MHCflurryPredictor:
         if not peptides:
             return pd.DataFrame(columns=list(SCHEMA))
 
+        # include_affinity_percentile defaults to False, which would leave only
+        # presentation_percentile - a percentile of the combined processing +
+        # affinity score, NOT an affinity rank. The 2.0 cutoff downstream is an
+        # affinity-percentile convention, so ask for the quantity it applies to.
         raw = self._predictor.predict(
             peptides=list(peptides),
             alleles={a: [a] for a in alleles},
+            include_affinity_percentile=True,
             verbose=0,
         )
 
@@ -80,9 +85,9 @@ class MHCflurryPredictor:
         pct_col = _first_present(
             raw,
             [
-                "presentation_percentile",
                 "affinity_percentile",
                 "mhcflurry_affinity_percentile",
+                "presentation_percentile",
             ],
         )
 
